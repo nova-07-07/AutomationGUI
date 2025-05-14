@@ -49,7 +49,8 @@ if db_name == "mongo":
         exit(1)  # Exit if DB connection fails0
 elif db_name == "postgres":
     try:
-        dsn = os.getenv("PostgresDns")
+        dsn = "postgres://avnadmin:AVNS_6gDCKyGCc5GFq0opToJ@pg-4d01fba-rajp18733-1d7a.h.aivencloud.com:22599/defaultdb?sslmode=require"
+        dsn = os.getenv("ostgres")
         conn = psycopg2.connect(dsn)
         cur = conn.cursor()
 
