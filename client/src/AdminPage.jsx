@@ -111,6 +111,7 @@ const Admin_Page = () => {
         <div className='AdminNav-buttons'>
           <button className="navigate-button" onClick={() => navigate('/ExecutePage')}>Execute Page</button>
           <button className="navigate-button" onClick={() => navigate('/home_page')}>Home Page</button>
+          <button className="navigate-button" onClick={() => navigate('/Admin_Edit_page')}>Admin_Edit_page</button>
         </div>
       </div>
 

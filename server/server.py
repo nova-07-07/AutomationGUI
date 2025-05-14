@@ -154,7 +154,7 @@ def signup():
 
     return jsonify({"message": "User created successfully"}), 201
 
-ADMIN_USERS = ["dass", "admin2", "superadmin","nova1"]
+ADMIN_USERS = ["admin2"]
 @app.route("/signin", methods=["POST"])
 def signin():
     data = request.json
@@ -1299,6 +1299,59 @@ def get_token_without_pass(username):
 
     return user_id
 
+
+# ADMIN_USERS = ["admin"]  # Replace with list of authorized admin users
+# addAdminUsers(userneme)
+
+@app.route("/addAdminUsers", methods=["POST"])
+@jwt_required()
+def add_admin_users():
+    accessAdmin = request.json.get("accessAdmin")
+    if accessAdmin not in ADMIN_USERS:
+        return jsonify({"error": "Not authorized"}), 403
+    username = request.json.get("username")
+    if db_name == "mongo":
+        users = users_collection.distinct("name")
+        if username not in users:
+            return jsonify({"error": "User not found"}), 404
+    elif db_name == "postgres":
+        cur = conn.cursor()
+        cur.execute("SELECT name FROM users")
+        users = [row[0] for row in cur.fetchall()]
+        cur.close()
+        if username not in users:
+            return jsonify({"error": "User not found"}), 404
+    if not username:
+        return jsonify({"error": "Username is required"}), 400
+    elif username in ADMIN_USERS:
+        return jsonify({"message": "User already authorized as admin"}), 200
+    elif username:
+        ADMIN_USERS.append(username)
+        return jsonify({"message": "User added as admin"}), 200
+    else:
+        return jsonify({"error": "Invalid username"}), 400
+
+@app.route("/removeAdminUsers", methods=["POST"])
+@jwt_required()
+def remove_admin_users():
+    accessAdmin = request.json.get("accessAdmin")
+    if accessAdmin not in ADMIN_USERS:
+        return jsonify({"error": "Not authorized"}), 403
+    username = request.json.get("username")
+    if not username:
+        return jsonify({"error": "Username is required"}), 400
+    elif username not in ADMIN_USERS:
+        return jsonify({"message": "User not authorized as admin"}), 200
+    elif username:
+        ADMIN_USERS.remove(username)
+        return jsonify({"message": "User removed as admin"}), 200
+    else:
+        return jsonify({"error": "Invalid username"}), 400
+
+@app.route("/getAdminUsers")
+@jwt_required()
+def get_admin_users():
+    return jsonify({"admin_users": ADMIN_USERS}), 200
 
 if __name__ == "__main__":
     app.run(debug=True, use_reloader=True)

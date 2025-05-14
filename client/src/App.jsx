@@ -4,7 +4,9 @@ import axios from "axios";
 import ExecutePage from "./ExecutePage";
 import HomePage from "./HomePage"
 import Admin_Page from "./AdminPage";
-import "./Authentication.css"
+import "./Authentication.css";
+import "./Admin_Edit_page.css"; 
+import Admin_Edit_page from "./Admin_Edit_page";
 
 function Home() {
   return (
@@ -41,7 +43,7 @@ export function SignIn() {
         localStorage.setItem("token", data.access_token);
         localStorage.setItem("username",data.username)
         localStorage.setItem("is_admin",data.is_admin)
-        
+        console.log("Token:", data.access_token)
         if (data.is_admin) {
           navigate("/Admin_Page");
         }else {
@@ -182,7 +184,6 @@ function SignUp() {
   );
 }
 
-
 function App() {
   return (
     <Router>
@@ -195,6 +196,7 @@ function App() {
         <Route path="/reset" element={<Reset />} />
         <Route path="/home_page" element={<HomePage />} />
         <Route path="/Admin_Page" element={<Admin_Page/>} />
+        <Route path="/Admin_Edit_page" element={<Admin_Edit_page/>} />
       </Routes>
     </Router>
   );
