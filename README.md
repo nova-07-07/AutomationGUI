@@ -11,7 +11,7 @@
     pip install -r requirements.txt
 
 ### 3.Create a .env file
-    create a .env file put values to runs the server
+**create a .env file put values to runs the server**
     dbname = your_database_name example:(mongo (or) postgres )
     JWT_SECRET_KEY = secret_key (your secret key)
     PostgresDns = postgres://avnadmin:...... (your postgres Dns)
@@ -28,6 +28,6 @@
     cd client 
     npm run dev
 
-### 7.Open the browser and go to http://localhost:3000/
+### 7.Open the browser and put the url something like http://localhost:5173/
 
-thanks for using our application!
+***thanks for using our application!***
