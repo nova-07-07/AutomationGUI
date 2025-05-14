@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+
+.settings-container {
+  position: relative;
+  color: black;
+  font-family: 'Roboto', sans-serif;
+}
+
+.bbt{
+  gap: 600px;
+}
+
+.settings-button {
+  font-size: 27px;
+  border-radius: 7px;
+  border: solid black 1px;
+  cursor: pointer;
+  margin-right: 20px;
+  font-family: 'Roboto', sans-serif;
+}
+
+.menu-container, .test-settings-container {
+  position: absolute;
+  top: 48px;
+  right: 0px;
+  background: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  border-radius: 8px;
+  width: 200px;
+  gap: 20px;
+  font-family: 'Roboto', sans-serif;
+}
+
+.menu-container ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  animation: fadeIn 0.3s ease-in-out, slideDown 0.5s ease-in-out;
+}
+
+.menu-container li button, .test-settings-container button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  animation: fadeIn 0.3s ease-in-out, slideDown 0.5s ease-in-out;
+  font-family: 'Roboto', sans-serif;
+}
+
+.test_type_lab {
+  padding: 7px;
+  animation: fadeIn 0.3s ease-in-out, slideDown 0.5s ease-in-out;
+  font-family: 'Roboto', sans-serif;
+}
+
+.back-button {
+  color: blue;
+  border: black 5px;
+  cursor: pointer;
+  animation: fadeIn 0.3s ease-in-out, slideDown 0.5s ease-in-out;
+  font-family: 'Roboto', sans-serif;
+}
+
+.input-field, .dropdown {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  animation: fadeIn 0.3s ease-in-out, slideDown 0.5s ease-in-out;
+  font-family: 'Roboto', sans-serif;
+}
+
+.btn_select:hover{
+  background-color: rgba(228, 228, 228, 0.61);
+  border-radius: 5px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slideDown {
+  from {
+    transform: translateX(100px);
+    opacity: 0;
+  }
+  25% {
+    transform: translateX(0px);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translateX(-10px);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.userlogo{
+  margin-bottom: -22px;
+  
+}
+.name{
+ margin-right: 50px;
+ margin-top: -40px;
+}

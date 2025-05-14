@@ -1,0 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+body{
+    background-color: brown;
+}
+
+.folder-container {
+    margin-left: 20px;
+  }
+  
+  .folder {
+    cursor: pointer;
+    font-weight: bold;
+    margin: 5px 0;
+  }
+  
+  .folder-content {
+    margin-left: 15px;
+  }
+  
+  .file {
+    cursor: pointer;
+    margin-left: 10px;
+  }
+  .run_set{
+    display: flex;
+    justify-content: space-between;
+  }
+  .hed{
+    font-size: 20px;
+    font-family: 'Times New Roman', Times, serif;
+  }
+.nav{
+    width: 100hv;
+    height: 65px;
+    display: flex;
+    padding: 10px;
+    gap: 20px;
+    justify-content: space-between;
+
+}
+
+.inputdev{
+    display: flex;
+    flex-direction: row;
+    width: max-content;
+}
+
+.pathIn{
+    padding-left: 10px;
+    height: 100%;
+    color: black;
+    width: 400px;
+    border-radius: 10px;
+}
+
+.right-1{
+    width: 100%;
+}
+
+
+.gobtn{
+    margin-left: 10px;
+    height: 100%;
+    border-radius: 5px;
+    width: 40px;
+    color: aliceblue;
+    background-color: brown;
+}
+
+.output{
+    padding: 20px;
+}
+
+.mainbody{
+    background-color: aqua;
+    display: flex;
+}
+
+.epath{
+    background-color: rgb(62, 91, 146);
+    height: 1000px;
+    cursor: "pointer";
+    color: "white" ;
+    padding: 20px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    margin-top: 10px;
+    border-radius: 10px;
+
+}
+
+.Settings{
+    background-color: rgb(189, 189, 189);
+    width: 50px;
+    height: 50px;
+    color: black;
+    font-size: 30px;
+    border-radius: 50%;
+}
+
+.rund{
+    color: white;
+    display: flex;
+    font-size: 20px;
+    gap: 30px;
+    justify-content: end;
+    align-items: center;
+}
+.hee{
+    font-size: 15px;
+}
+.rundev{
+    display: flex;
+    flex-direction: row;
+    color: aliceblue;
+    width: max-content;
+    height: 100%;
+    padding: 20px;
+    font-size: 20px;
+}
+
+.run-btn{
+    margin-left: 20px;
+    border: white solid 1px;
+    font-weight: bold;
+    height: 30px;
+    padding-left: 10px;
+    border-radius: 5px;
+    padding-right: 10px; 
+    background-color: rgb(0, 216, 0);
+    color: rgb(0, 0, 0);
+}
+
+.ter-tit{
+    color: yellowgreen;
+}
+
+.ter{
+    padding: 0px;
+}
+
+.left{
+    padding: 20px;
+    background-color: rgb(211, 205, 197);
+    min-width: 300px;
+    min-height: 90vh;
+    overflow: scroll;
+}
+
+.right{
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.854);
+    width: 100%;
+    height: 94vh;
+    justify-content: space-between;
+    display: flex;
+    font-size: 13px;
+    color: white;
+    overflow-x: scroll;
+}

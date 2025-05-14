@@ -1,0 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+.folder-container {
+    margin-left: 20px;
+  }
+
+  .nav_one{
+    width: 55%;
+    justify-content: space-between;
+  }
+  
+  .folder {
+    cursor: pointer;
+    font-weight: bold;
+    margin: 5px 0;
+  }
+  
+  .folder-content {
+    margin-left: 15px;
+  }
+  
+  .file {
+    cursor: pointer;
+    margin-left: 10px;
+  }
+  
+  .hed{
+    font-size: 30px;
+    font-family: 'Times New Roman', Times, serif;
+  }
+
+  .nav_two{
+    width: 45%;
+    justify-content: space-between;
+  }
+.nav{
+    background-color: rgba(126, 126, 126, 0.616);
+    width: 100hv;
+  
+    height: 65px;
+    display: flex;
+    padding: 10px;
+    justify-content: space-between;
+
+}
+
+.inputdev{
+    display: flex;
+    flex-direction: row;
+    
+}
+
+.pathIn{
+    padding-left: 10px;
+    height: 100%;
+    width: 400px;
+    border-radius: 10px;
+}
+
+.right-1{
+    width: 100%;
+}
+
+
+.gobtn{
+    margin-left: 20px;
+    border: white solid 1px;
+    font-weight: bold;
+    height: 40px;
+    padding-left: 10px;
+    border-radius: 5px;
+    padding-right: 10px; 
+    background-color:gray;
+    color: rgb(0, 0, 0);
+}
+
+.output{
+    padding: 20px;
+}
+
+.mainbody{
+    background-color: aqua;
+    display: flex;
+    width: 100%;
+}
+
+.rund{
+    color: rgb(0, 0, 0);
+    display: flex;
+    justify-content: end;
+    align-items: center;
+}
+
+.rundev{
+    display: flex;
+    flex-direction: column;
+    color: aliceblue;
+    width: max-content;
+    height: 100%;
+    padding: 20px;
+}
+
+.run-btn{
+    margin-left: 20px;
+    border: white solid 1px;
+    font-weight: bold;
+    height: 40px;
+    padding-left: 10px;
+    border-radius: 5px;
+    padding-right: 10px; 
+    background-color:gray;
+    color: rgb(0, 0, 0);
+}
+
+.ter-tit{
+    color: yellowgreen;
+}
+
+.ter{
+    padding: 0px;
+}
+
+.split-container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+  }
+  
+  .left {
+    padding: 20px;
+    background-color: rgb(211, 205, 197);
+    min-width: 200px;
+    width: 10%;
+    overflow: auto;
+  }
+  
+  .divider {
+    width: 6px;
+    background-color: #333;
+    cursor: col-resize;
+    user-select: none;
+  }
+  
+  .right {
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.854);
+    width: 100%;
+    height: 100%;
+    overflow-x: auto;
+    color: white;
+    display: flex;
+    font-size: 13px;
+    flex-grow: 1;
+    min-width: 200px;
+  }
+  
+.Dash{
+    width: 130%;
+    margin-left: -15%;
+}
