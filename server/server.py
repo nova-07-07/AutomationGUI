@@ -460,20 +460,21 @@ Key steps:
 @app.route("/execute-script", methods=["POST"])
 @jwt_required()
 def execute_file_script():
+    print("Executing script...")
     data = request.json
     file_path = data.get("file_path")
     env_path = data.get("env_path")
     testType = data.get("testType")
     args = data.get("arg") or []
-
+    print("=======1=======")
     # Normalize env_path if it's a list
     if isinstance(env_path, list):
         env_path = env_path[0]
-
+    print("=======2=======")
     # Normalize paths
     file_path = os.path.abspath(file_path)
     env_path = os.path.abspath(env_path)
-
+    print("=======3=======")
     # Validate paths
     if not os.path.exists(file_path) or not file_path.endswith(".py"):
         return jsonify({"error": "Invalid file path"}), 400
@@ -488,6 +489,13 @@ def execute_file_script():
         flattened_args = args
 
     try:
+        print("=======4=======")
+        #print all the arguments
+        print("bat file path:", BAT_FILE_PATH)
+        print("File path:", file_path)
+        print("Env path:", env_path)
+        print("Args:", flattened_args)
+        print("Command:", [BAT_FILE_PATH, file_path, env_path, testType] + flattened_args)
         result = subprocess.run(
             [BAT_FILE_PATH, file_path, env_path, testType] + flattened_args,
             capture_output=True,
