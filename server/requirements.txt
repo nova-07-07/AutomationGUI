@@ -1,0 +1,8 @@
+Flask==2.3.2
+flask-cors==3.0.10
+psycopg2-binary==2.9.9
+twilio==8.10.0
+pymongo==4.6.1
+bcrypt==4.1.2
+Flask-JWT-Extended==4.6.0
+python-dotenv==1.0.1
