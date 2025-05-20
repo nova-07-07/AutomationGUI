@@ -18,6 +18,7 @@ import random
 import string
 import uuid
 import json
+from bson import ObjectId
 
 
 load_dotenv()
@@ -31,9 +32,7 @@ os.makedirs(REPO_DIR, exist_ok=True)
 
 db_name = os.getenv("dbname")
 if db_name == "mongo":
-    MONGO_URI = "mongodb://localhost:27017"  # Local MongoDB connection
-    MONGO_URI = "mongodb+srv://nova:nova2346@nova.r5lap4p.mongodb.net/?retryWrites=true&w=majority&appName=nova"  # Local MongoDB connection
-
+    MONGO_URI = os.getenv("mongoDbDns")
     try:
         client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)  # 5-second timeout
         db = client["user_database"]
@@ -963,9 +962,6 @@ def get_script(report_id):
         return jsonify({"error": "Invalid database type"}), 400
 
 
-
-
-from bson import ObjectId
 
 def get_username_from_id(user_id):
     try:
