@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import psycopg2
-import psycopg2.extras  # ✅ This line is missing in your code
+import psycopg2.extras  
 import subprocess
 from twilio.rest import Client
 import ast
@@ -31,65 +31,114 @@ BAT_FILE_PATH = os.path.abspath("run_python_file.bat")
 os.makedirs(REPO_DIR, exist_ok=True)
 
 db_name = os.getenv("dbname")
+
+def hash_password(password):
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def create_user_mongo(users_collection):
+    username = input("Enter username: ").strip()
+    password = input("Enter password: ").strip()
+    print("Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.")
+    password = hash_password(password)
+    try:
+        users_collection.insert_one({
+            "name": username,
+            "password": password,
+            "role": "admin"
+        })
+        print("✅ User created successfully in MongoDB.")
+    except Exception as e:
+        print(f"❌ Error creating user in MongoDB: {e}")
+        exit(1)
+
+def create_user_postgres(conn):
+    username = input("Enter username: ").strip()
+    password = input("Enter password: ").strip()
+    hashed_password = hash_password(password)
+    try:
+        cur = conn.cursor()
+        cur.execute("INSERT INTO users (name, password) VALUES (%s, %s);", (username, hashed_password))
+        conn.commit()
+        cur.close()
+        print("✅ User created successfully in PostgreSQL.")
+    except Exception as e:
+        print(f"❌ Error creating user in PostgreSQL: {e}")
+        exit(1)
+
 if db_name == "mongo":
     MONGO_URI = os.getenv("mongoDbDns")
     try:
-        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)  # 5-second timeout
+        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
         db = client["user_database"]
         users_collection = db["users"]
         user_data_collection = db["user_data"]
         reports_collection = db["reports"]
 
-    # Attempt to ping the database
         client.admin.command('ping')
         print("✅ Connected to local MongoDB successfully!")
+
+        # Check if any user exists
+        if users_collection.count_documents({}) == 0:
+            print("⚠️ No users found in MongoDB. Creating a new admin...")
+            create_user_mongo(users_collection)
+        else:
+            print("👤 User(s) already exist in MongoDB.")
+
     except Exception as e:
         print(f"❌ MongoDB Connection Error: {e}")
-        exit(1)  # Exit if DB connection fails0
+        exit(1)
+
 elif db_name == "postgres":
     try:
         dsn = os.getenv("ostgres")
-        conn = psycopg2.connect(dsn)
+        conn = psycopg2.connect(dsn, cursor_factory=RealDictCursor)
         cur = conn.cursor()
 
-    # Create users table
+        # Create tables
         cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """)
-
-    # Create user_data table
         cur.execute("""
         CREATE TABLE IF NOT EXISTS user_data (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        env_path TEXT[],
-        report JSONB,  
-        used_paths TEXT[],
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    """)
-
-    # Create reports table
-        cur.execute("""
-        CREATE TABLE IF NOT EXISTS reports (
-        id SERIAL PRIMARY KEY,
-        report_id UUID UNIQUE,
-        email VARCHAR(255),
-        title TEXT,
-        content TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            id SERIAL PRIMARY KEY,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            env_path TEXT[],
+            report JSONB,  
+            used_paths TEXT[],
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """)
-
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS reports (
+            id SERIAL PRIMARY KEY,
+            report_id UUID UNIQUE,
+            email VARCHAR(255),
+            title TEXT,
+            content TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
         conn.commit()
+
+        # Check if any user exists
+        cur.execute("SELECT COUNT(*) FROM users;")
+        user_count = cur.fetchone()['count']
         cur.close()
+
+        if user_count == 0:
+            print("⚠️ No users found in PostgreSQL. Creating a new admin...")
+            create_user_postgres(conn)
+        else:
+            print("👤 User(s) already exist in PostgreSQL.")
+
         conn.close()
         print("✅ PostgreSQL connected and all tables created!")
+
     except Exception as e:
         print(f"❌ PostgreSQL Connection or Table Creation Error: {e}")
         exit(1)
@@ -125,17 +174,18 @@ def signup():
     print("Received signup data:", data)
     username = data.get("name")
     password = data.get("password")
+    role = data.get("role")
     
 
-    if not username or not password:
-        return jsonify({"error": "Username and password required"}), 400
+    if not username or not password or not role:
+        return jsonify({"error": "Username and password and role are required"}), 400
 
     hashed_password = hash_password(password)
 
     if db_name == "mongo":
         if users_collection.find_one({"name": username}):
             return jsonify({"error": "Username already exists"}), 400
-        users_collection.insert_one({"name": username, "password": hashed_password})
+        users_collection.insert_one({"name": username, "password": hashed_password , "role": role})
 
     elif db_name == "postgres":
         conn = psycopg2.connect(dsn)
@@ -144,7 +194,7 @@ def signup():
         if cur.fetchone():
             cur.close()
             return jsonify({"error": "Username already exists"}), 400
-        cur.execute("INSERT INTO users (name, password) VALUES (%s, %s)", (username, hashed_password))
+        cur.execute("INSERT INTO users (name, password, role) VALUES (%s, %s)", (username, hashed_password ,role))
         conn.commit()
         cur.close()
 
@@ -153,7 +203,6 @@ def signup():
 
     return jsonify({"message": "User created successfully"}), 201
 
-ADMIN_USERS = ["admin2"]
 @app.route("/signin", methods=["POST"])
 def signin():
     data = request.json
@@ -165,12 +214,11 @@ def signin():
         if not user or not check_password(password, user["password"]):
             return jsonify({"error": "Invalid username or password"}), 401
 
-        is_admin = username in ADMIN_USERS
         user_id = str(user["_id"])
         
         access_token = create_access_token(identity=user_id, expires_delta=timedelta(hours=1))
         
-        if is_admin:
+        if user["role"] == "admin":
             print("Admin Login:", username)
             return jsonify({
                 "access_token": access_token,
@@ -1257,13 +1305,16 @@ def get_used_paths():
 @jwt_required()
 def get_all_users():
     if db_name == "mongo":
-        users = users_collection.distinct("name")
+        # Fetch name and role from each document
+        users_cursor = users_collection.find({}, {"_id": 0, "name": 1, "role": 1})
+        users = list(users_cursor)
     elif db_name == "postgres":
         cur = conn.cursor()
-        cur.execute("SELECT name FROM users")
-        users = [row[0] for row in cur.fetchall()]
+        cur.execute("SELECT name, role FROM users")
+        users = [{"name": row[0], "role": row[1]} for row in cur.fetchall()]
         cur.close()
     return jsonify({"users": users})
+
 
 
 def get_token_without_pass(username):
@@ -1296,58 +1347,83 @@ def get_token_without_pass(username):
     return user_id
 
 
-# ADMIN_USERS = ["admin"]  # Replace with list of authorized admin users
+ADMIN_USERS = ["ad"]  # Replace with list of authorized admin users
 # addAdminUsers(userneme)
+
+@app.route("/removeAdminUsers", methods=["POST"])
+@jwt_required()
+def remove_admin_users():
+    print("Removing admin user...")
+    accessAdmin = request.json.get("accessAdmin")
+    if not accessAdmin:
+        return jsonify({"error": "accessAdmin is required"}), 400
+    
+    #  get full with username
+
+    accessAdminFullDetails = users_collection.find_one({"name": accessAdmin})
+    if not accessAdminFullDetails:
+        return jsonify({"error": "User not found"}), 404
+
+    if accessAdminFullDetails["role"]!= "admin":
+        return jsonify({"message": "User not authorized as admin"}), 200
+
+    username = request.json.get("username")
+    if not username:
+        return jsonify({"error": "Username is required"}), 400
+    # change role to user
+    if db_name == "mongo":
+        users_collection.update_one({"name": username}, {"$set": {"role": "user"}})
+        return jsonify({"message": "User removed as admin"}), 200
+    elif db_name == "postgres":
+        conn = psycopg2.connect(dsn)
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET role = 'user' WHERE name = %s", (username,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({"message": "User removed as admin"}), 200
+    else:
+        return jsonify({"error": "Invalid username"}), 400
+
 
 @app.route("/addAdminUsers", methods=["POST"])
 @jwt_required()
 def add_admin_users():
     accessAdmin = request.json.get("accessAdmin")
-    if accessAdmin not in ADMIN_USERS:
-        return jsonify({"error": "Not authorized"}), 403
+    if not accessAdmin:
+        return jsonify({"error": "accessAdmin is required"}), 400
+    
+    #  get full with username
+
+    accessAdminFullDetails = users_collection.find_one({"name": accessAdmin})
+    if not accessAdminFullDetails:
+        return jsonify({"error": "User not found"}), 404
+
+    if accessAdminFullDetails["role"]!= "admin":
+        return jsonify({"message": "User not authorized as admin"}), 200
+
     username = request.json.get("username")
-    if db_name == "mongo":
-        users = users_collection.distinct("name")
-        if username not in users:
-            return jsonify({"error": "User not found"}), 404
-    elif db_name == "postgres":
-        cur = conn.cursor()
-        cur.execute("SELECT name FROM users")
-        users = [row[0] for row in cur.fetchall()]
-        cur.close()
-        if username not in users:
-            return jsonify({"error": "User not found"}), 404
     if not username:
         return jsonify({"error": "Username is required"}), 400
-    elif username in ADMIN_USERS:
-        return jsonify({"message": "User already authorized as admin"}), 200
-    elif username:
-        ADMIN_USERS.append(username)
+    if username == accessAdmin:
+        return jsonify({"error": "You cannot add yourself as admin"}), 400
+    # check if user is already admin
+    # change role to user
+    if db_name == "mongo":
+        users_collection.update_one({"name": username}, {"$set": {"role": "admin"}})
+        return jsonify({"message": "User added as admin"}), 200
+    elif db_name == "postgres":
+        conn = psycopg2.connect(dsn)
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET role = 'admin' WHERE name = %s", (username,))
+        conn.commit()
+        cur.close()
+        conn.close()
         return jsonify({"message": "User added as admin"}), 200
     else:
         return jsonify({"error": "Invalid username"}), 400
 
-@app.route("/removeAdminUsers", methods=["POST"])
-@jwt_required()
-def remove_admin_users():
-    accessAdmin = request.json.get("accessAdmin")
-    if accessAdmin not in ADMIN_USERS:
-        return jsonify({"error": "Not authorized"}), 403
-    username = request.json.get("username")
-    if not username:
-        return jsonify({"error": "Username is required"}), 400
-    elif username not in ADMIN_USERS:
-        return jsonify({"message": "User not authorized as admin"}), 200
-    elif username:
-        ADMIN_USERS.remove(username)
-        return jsonify({"message": "User removed as admin"}), 200
-    else:
-        return jsonify({"error": "Invalid username"}), 400
 
-@app.route("/getAdminUsers")
-@jwt_required()
-def get_admin_users():
-    return jsonify({"admin_users": ADMIN_USERS}), 200
-
+# port 5000
 if __name__ == "__main__":
-    app.run(debug=True, use_reloader=True)
+    app.run(port=5000 ,debug=True, use_reloader=True)

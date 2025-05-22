@@ -12,6 +12,27 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 
 }
+.ad-ed-admin-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding-right: 20px;
+  padding-left: 20px;
+}
+
+.ad-ed-user-list-container{
+  display: flex;
+}
+
+.current-user-highlight {
+  font-weight: bold;
+  color: green;
+  /* this btn desablle */
+  pointer-events: none;
+}
+
+
 .ad-ed-back{
   background-color: #4CAF50;
   color: white;
@@ -88,17 +109,22 @@
   cursor: not-allowed;
 }
 
+
 .ad-ed-user-list {
   display: flex;
-  width: 100%;
+  width: 50%;
   margin-top: 20px;
   justify-content: space-between;
 }
 
 .ad-ed-admin-list,
 .ad-ed-users-list {
-  width: 45%;
+
+  width: 50%;
   height: 60vh;
+}
+.ad-ed-users-list {
+  margin-top: 20px;
 }
 
 .ad-ed-admin-list h3,

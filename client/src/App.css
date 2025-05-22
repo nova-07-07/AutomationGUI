@@ -7,6 +7,35 @@ body{
     background-color: brown;
 }
 
+.home-container{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #00c6ff;
+    border-radius: 5%;
+    width: 100vh;
+    height: 50vh;
+}
+.home-container-bg{
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+}
+.project-description {
+  display: inline-block;
+  font-size: 1.2rem;
+  margin-top: 1rem;
+  background: linear-gradient(90deg, #ffffff, #000000);
+  background-size: 200% auto;
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: shine 3s linear infinite;
+}
+
+
+
 .folder-container {
     margin-left: 20px;
   }
@@ -161,4 +190,110 @@ body{
     font-size: 13px;
     color: white;
     overflow-x: scroll;
+}
+
+/* Page container animation */
+.fade-in {
+  animation: fadeInZoom 1s ease-in-out;
+}
+
+/* Looping typing effect */
+.typing-loop {
+  display: inline-block;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  white-space: nowrap;
+  width: max-content;
+  border-right: 2px solid #007BFF;
+  font-family: 'Courier New', monospace;
+  font-size: 2.8rem;
+  color: #007BFF;
+  animation: typingLoop 4s steps(30) infinite, blink 0.75s step-end infinite;
+}
+
+@keyframes typingLoop {
+  0% { width: 0 }
+  50% { width: 70%  }
+  80% { width: 70% ; color : #000000 }
+  100% { width: 0 }
+}
+
+@keyframes blink {
+  50% { border-color: transparent }
+}
+
+/* Description text animation */
+.project-description {
+  display: inline-block;
+  font-size: 1.2rem;
+  margin-top: 1rem;
+  background: linear-gradient(90deg, #00c6ff, #0072ff, #00c6ff);
+  background-size: 200% auto;
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: shine 3s linear infinite;
+  opacity: 0;
+}
+
+.animated-slide {
+  animation: slideFadeIn 2s ease forwards;
+  animation-delay: 1s;
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+@keyframes slideFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Button hover pulse */
+.pulse-button {
+  background-color: #007bff;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: transform 0.2s ease;
+  font-weight: bold;
+}
+
+.pulse-button:hover {
+  animation: pulse 0.6s ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Page fade zoom effect */
+@keyframes fadeInZoom {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

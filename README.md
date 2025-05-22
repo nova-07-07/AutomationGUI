@@ -11,8 +11,8 @@ Follow these steps to run the project locally.
 
 ### 1. Clone the Repository
 
-git clone https://github.com/nova-07-07/AutomationGUI
-cd AutomationGUI
+    git clone https://github.com/nova-07-07/AutomationGUI
+    cd AutomationGUI
 
 
 ### 2.Install Backend Dependencies
@@ -31,7 +31,8 @@ cd AutomationGUI
     python server.py
 
 ### 5.Install Frontend Dependencies
-    cd client npm install
+    cd client 
+    npm install
 
 ### 6.Run the Frontend
     cd client 
