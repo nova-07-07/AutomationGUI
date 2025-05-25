@@ -19,6 +19,8 @@ import string
 import uuid
 import json
 from bson import ObjectId
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 
 load_dotenv()
@@ -57,7 +59,7 @@ def create_user_postgres(conn):
     hashed_password = hash_password(password)
     try:
         cur = conn.cursor()
-        cur.execute("INSERT INTO users (name, password) VALUES (%s, %s);", (username, hashed_password))
+        cur.execute("INSERT INTO users (name, password,role) VALUES (%s, %s,%s);", (username, hashed_password,"admin"))
         conn.commit()
         cur.close()
         print("✅ User created successfully in PostgreSQL.")
@@ -90,7 +92,7 @@ if db_name == "mongo":
 
 elif db_name == "postgres":
     try:
-        dsn = os.getenv("ostgres")
+        dsn = os.getenv("postgresDns")
         conn = psycopg2.connect(dsn, cursor_factory=RealDictCursor)
         cur = conn.cursor()
 
@@ -100,13 +102,16 @@ elif db_name == "postgres":
             id SERIAL PRIMARY KEY,
             name VARCHAR(255) UNIQUE NOT NULL,
             password TEXT NOT NULL,
+            role VARCHAR(50) DEFAULT 'user',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """)
+        
         cur.execute("""
+            
         CREATE TABLE IF NOT EXISTS user_data (
             id SERIAL PRIMARY KEY,
-            email VARCHAR(255) UNIQUE NOT NULL,
+            username VARCHAR(255) UNIQUE NOT NULL,
             env_path TEXT[],
             report JSONB,  
             used_paths TEXT[],
@@ -114,10 +119,13 @@ elif db_name == "postgres":
         );
         """)
         cur.execute("""
+                    
+
+                    
         CREATE TABLE IF NOT EXISTS reports (
             id SERIAL PRIMARY KEY,
             report_id UUID UNIQUE,
-            email VARCHAR(255),
+            username VARCHAR(255),
             title TEXT,
             content TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -126,6 +134,7 @@ elif db_name == "postgres":
         conn.commit()
 
         # Check if any user exists
+        
         cur.execute("SELECT COUNT(*) FROM users;")
         user_count = cur.fetchone()['count']
         cur.close()
@@ -194,7 +203,11 @@ def signup():
         if cur.fetchone():
             cur.close()
             return jsonify({"error": "Username already exists"}), 400
-        cur.execute("INSERT INTO users (name, password, role) VALUES (%s, %s)", (username, hashed_password ,role))
+        cur.execute(
+    "INSERT INTO users (name, password, role) VALUES (%s, %s, %s)",
+    (username, hashed_password, role)
+    )
+
         conn.commit()
         cur.close()
 
@@ -235,18 +248,20 @@ def signin():
     elif db_name == "postgres":
         conn = psycopg2.connect(dsn)
         cur = conn.cursor()
-        cur.execute("SELECT id, password FROM users WHERE name = %s", (username,))
+        cur.execute("SELECT id, password, role FROM users WHERE name = %s", (username,))
         user = cur.fetchone()
+
         cur.close()
 
         if not user or not check_password(password, user[1]):
             return jsonify({"error": "Invalid username or password"}), 401
 
         user_id = str(user[0])
+        user_role = user[2]
         access_token = create_access_token(identity=user_id, expires_delta=timedelta(hours=1))
 
-        is_admin = username in ADMIN_USERS
-        if is_admin:
+        
+        if user_role == "admin":
             admin_token = create_access_token(identity=f"admin:{user_id}", expires_delta=timedelta(hours=2))
             return jsonify({
                 "access_token": access_token,
@@ -646,12 +661,12 @@ def update_env_path():
             conn = psycopg2.connect(dsn)
             cur = conn.cursor()
 
-            cur.execute("SELECT env_path FROM user_data WHERE email = %s", (email,))
+            cur.execute("SELECT env_path FROM user_data WHERE username = %s", (email,))
             result = cur.fetchone()
 
             if not result:
                 cur.execute("""
-                    INSERT INTO user_data (email, env_path) VALUES (%s, ARRAY[%s])
+                    INSERT INTO user_data (username, env_path) VALUES (%s, ARRAY[%s])
                 """, (email, new_env_path))
             else:
                 current_paths = result[0] or []
@@ -704,7 +719,7 @@ def get_env_paths():
         conn = psycopg2.connect(dsn)
         cur = conn.cursor()
 
-        cur.execute("SELECT env_path FROM user_data WHERE email = %s", (email,))
+        cur.execute("SELECT env_path FROM user_data WHERE username = %s", (email,))
         result = cur.fetchone()
 
         cur.close()
@@ -807,19 +822,18 @@ JWT authentication is required to access this route.
 @app.route("/update-report", methods=["POST"])
 @jwt_required()
 def update_report():
-    email = get_jwt_identity()
+    user_id = get_jwt_identity()  # This is user ID (like 9), not username
     data = request.json
     new_report = data.get("report_id")
     name = data.get("name")
-    print("ID",new_report)
 
     if not new_report or not name:
         return jsonify({"error": "Both name and report_id are required"}), 400
 
     if db_name == "mongo":
-        initialize_user_data(email)
+        initialize_user_data(user_id)
         user_data_collection.update_one(
-            {"email": email},
+            {"email": user_id},
             {"$addToSet": {"report": [name, new_report]}}
         )
         return jsonify({"message": "Report updated successfully"}), 200
@@ -829,12 +843,20 @@ def update_report():
             conn = psycopg2.connect(dsn)
             cur = conn.cursor()
 
-            cur.execute("SELECT report FROM user_data WHERE email = %s", (email,))
+            # ✅ Get the username from the users table using ID
+            cur.execute("SELECT name FROM users WHERE id = %s", (user_id,))
+            user_row = cur.fetchone()
+
+            if not user_row:
+                return jsonify({"error": "User not found"}), 404
+
+            username = user_row[0]
+
+            # ✅ Continue with username
+            cur.execute("SELECT report FROM user_data WHERE username = %s", (username,))
             result = cur.fetchone()
 
             new_entry = {"name": name, "report_id": new_report}
-            print(new_entry)
-
             current_report = []
             if result and result[0]:
                 try:
@@ -842,18 +864,17 @@ def update_report():
                 except Exception as e:
                     print("⚠️ Error loading existing report JSON:", e)
 
-        # Only add if not already present
+            # Only add if not already present
             if new_entry not in current_report:
                 current_report.append(new_entry)
 
-        # Upsert logic
+            # ✅ UPSERT using username
             cur.execute("""
-            INSERT INTO user_data (email, report)
-            VALUES (%s, %s)
-            ON CONFLICT (email) 
-            DO UPDATE SET report = %s
-         """, (email, json.dumps(current_report),json.dumps(current_report)
-))
+                INSERT INTO user_data (username, report)
+                VALUES (%s, %s)
+                ON CONFLICT (username) 
+                DO UPDATE SET report = %s
+            """, (username, json.dumps(current_report), json.dumps(current_report)))
 
             conn.commit()
             cur.close()
@@ -864,7 +885,6 @@ def update_report():
         except Exception as e:
             print(f"❌ PostgreSQL Error updating report: {e}")
             return jsonify({"error": str(e)}), 500
-
 
 '''
 This route handles POST requests to create a new script, store its content, 
@@ -921,20 +941,25 @@ def create_script():
             conn = psycopg2.connect(dsn)
             cur = conn.cursor()
 
-            # Insert into PostgreSQL reports table
-            cur.execute("""
-                INSERT INTO reports (report_id,email, title, content)
-                VALUES (%s, %s, %s,%s)
-                
-            """, (report_id,user_id, name, script_content))
+        # 🔍 Get username from users table
+            cur.execute("SELECT name FROM users WHERE id = %s", (user_id,))
+            user_row = cur.fetchone()
+            if not user_row:
+                return jsonify({"error": "User not found"}), 404
 
-            # report_id = cur.fetchone()[0]
+            username = user_row[0]
+
+        # ✅ Now insert using correct username
+            cur.execute("""
+                INSERT INTO reports (report_id, username, title, content)
+                VALUES (%s, %s, %s, %s)
+            """, (report_id, username, name, script_content))
 
             conn.commit()
             cur.close()
             conn.close()
 
-            return jsonify({"message": "Script stored successfully", "report_id": report_id}), 201
+            return jsonify({"message": "Script stored successfully", "report_id": report_id}), 200
 
         except Exception as e:
             print(f"❌ PostgreSQL error in create_script: {e}")
@@ -1037,13 +1062,13 @@ Expected behavior:
 @jwt_required()
 def get_user_reports():
     user_id = get_jwt_identity()
-    requester_username = get_username_from_id(user_id)
-    is_admin = requester_username in ADMIN_USERS
-
-    # Optional: query param to fetch reports for specific user (admin only)
     target_username = request.args.get("username")
 
     if db_name == "mongo":
+        user = users_collection.find_one({"_id": ObjectId(user_id)})
+        role = user.get("role") if user else None
+        is_admin = role == "admin"
+
         if is_admin and target_username:
             target_user = users_collection.find_one({"name": target_username})
             if not target_user:
@@ -1051,11 +1076,10 @@ def get_user_reports():
             target_user_id = str(target_user["_id"])
             user_reports = list(reports_collection.find({"user_id": target_user_id}))
         else:
-            # Normal user or admin without target => get own reports
             user_reports = list(reports_collection.find({"user_id": user_id}))
 
         for report in user_reports:
-            report["_id"] = str(report["_id"])  # ObjectId to string
+            report["_id"] = str(report["_id"])
 
         return jsonify({"reports": user_reports}), 200
 
@@ -1064,24 +1088,37 @@ def get_user_reports():
             conn = psycopg2.connect(dsn)
             cur = conn.cursor()
 
+    # Get role and name from users table
+            cur.execute("SELECT role, name FROM users WHERE id = %s", (user_id,))
+            row = cur.fetchone()
+
+            if not row or len(row) < 2:
+                return jsonify({"error": "User not found or missing data"}), 404
+
+            role, requester_name = row
+            is_admin = role == "admin"
+
             if is_admin and target_username:
-                cur.execute("SELECT email FROM users WHERE name = %s", (target_username,))
+        # Verify target user exists
+                cur.execute("SELECT name FROM users WHERE name = %s", (target_username,))
                 row = cur.fetchone()
+
                 if not row:
                     return jsonify({"error": "Target user not found"}), 404
-                target_email = row[0]
+                target_name = row[0]
 
                 cur.execute("""
-                    SELECT report_id, email, title, content, created_at
-                    FROM reports
-                    WHERE email = %s
-                """, (target_email,))
+            SELECT report_id, title, content, created_at
+            FROM reports
+            WHERE username = %s
+            """, (target_name,))
             else:
+        # Normal user or admin fetching own reports
                 cur.execute("""
-                    SELECT report_id, email, title, content, created_at
-                    FROM reports
-                    WHERE email = %s
-                """, (user_id,))
+            SELECT report_id, title, content, created_at
+            FROM reports
+            WHERE username = %s
+        """, (requester_name,))
 
             rows = cur.fetchall()
             cur.close()
@@ -1089,11 +1126,10 @@ def get_user_reports():
 
             reports = [
                 {
-                    "report_id": row[0],
-                    "email": row[1],
-                    "file_name": row[2],
-                    "file_data": row[3],
-                    "created_at": row[4].isoformat() if row[4] else None 
+            "report_id": row[0],
+            "file_name": row[1],
+            "file_data": row[2],
+            "created_at": row[3].isoformat() if row[3] else None
                 }
                 for row in rows
             ]
@@ -1104,19 +1140,12 @@ def get_user_reports():
             print(f"❌ Error fetching reports from PostgreSQL: {e}")
             return jsonify({"error": "Failed to fetch reports"}), 500
 
-    else:
-        return jsonify({"error": "Invalid database type"}), 400
-
 @app.route("/delete-report/<report_id>", methods=["DELETE"])
 @jwt_required()
 def delete_report(report_id):
     current_user_id = get_jwt_identity()
-    username = get_username_from_id(current_user_id)
-    is_admin = username in ADMIN_USERS
-
-    if not is_admin:
-        return jsonify({"error": "Not authorized"}), 403
-
+    
+    
     if db_name == "mongo":
         result = reports_collection.delete_one({"_id": report_id})
         if result.deleted_count == 0:
@@ -1220,7 +1249,7 @@ def store_used_path():
             cur = conn.cursor()
 
             # Check if user_data exists
-            cur.execute("SELECT used_paths FROM user_data WHERE email = %s", (email,))
+            cur.execute("SELECT used_paths FROM user_data WHERE username = %s", (email,))
             result = cur.fetchone()
 
             if result:
@@ -1229,11 +1258,11 @@ def store_used_path():
                      cur.execute("""
                     UPDATE user_data 
                     SET used_paths = array_append(used_paths, %s) 
-                    WHERE email = %s
+                    WHERE username = %s
                 """, (used_path, email))
             else:
                 cur.execute("""
-                    INSERT INTO user_data (email, used_paths)
+                    INSERT INTO user_data (username, used_paths)
                     VALUES (%s, ARRAY[%s])
                 """, (email, used_path))
 
@@ -1290,7 +1319,7 @@ def get_used_paths():
         conn = psycopg2.connect(dsn)
         cur = conn.cursor()
 
-        cur.execute("SELECT used_paths FROM user_data WHERE email = %s", (email,))
+        cur.execute("SELECT used_paths FROM user_data WHERE username = %s", (email,))
         result = cur.fetchone()
 
         cur.close()
@@ -1309,10 +1338,12 @@ def get_all_users():
         users_cursor = users_collection.find({}, {"_id": 0, "name": 1, "role": 1})
         users = list(users_cursor)
     elif db_name == "postgres":
+        conn = psycopg2.connect(dsn)
         cur = conn.cursor()
         cur.execute("SELECT name, role FROM users")
         users = [{"name": row[0], "role": row[1]} for row in cur.fetchall()]
         cur.close()
+        conn.close()
     return jsonify({"users": users})
 
 
@@ -1347,33 +1378,33 @@ def get_token_without_pass(username):
     return user_id
 
 
-ADMIN_USERS = ["ad"]  # Replace with list of authorized admin users
+  # Replace with list of authorized admin users
 # addAdminUsers(userneme)
 
 @app.route("/removeAdminUsers", methods=["POST"])
 @jwt_required()
 def remove_admin_users():
     print("Removing admin user...")
+
     accessAdmin = request.json.get("accessAdmin")
+    username = request.json.get("username")  # ✅ moved to top
+
     if not accessAdmin:
         return jsonify({"error": "accessAdmin is required"}), 400
-    
-    #  get full with username
-
-    accessAdminFullDetails = users_collection.find_one({"name": accessAdmin})
-    if not accessAdminFullDetails:
-        return jsonify({"error": "User not found"}), 404
-
-    if accessAdminFullDetails["role"]!= "admin":
-        return jsonify({"message": "User not authorized as admin"}), 200
-
-    username = request.json.get("username")
     if not username:
-        return jsonify({"error": "Username is required"}), 400
-    # change role to user
+        return jsonify({"error": "username is required"}), 400
+
     if db_name == "mongo":
+        accessAdminFullDetails = users_collection.find_one({"name": accessAdmin})
+        if not accessAdminFullDetails:
+            return jsonify({"error": "User not found"}), 404
+
+        if accessAdminFullDetails["role"] != "admin":
+            return jsonify({"message": "User not authorized as admin"}), 200
+
         users_collection.update_one({"name": username}, {"$set": {"role": "user"}})
         return jsonify({"message": "User removed as admin"}), 200
+
     elif db_name == "postgres":
         conn = psycopg2.connect(dsn)
         cur = conn.cursor()
@@ -1382,46 +1413,55 @@ def remove_admin_users():
         cur.close()
         conn.close()
         return jsonify({"message": "User removed as admin"}), 200
+
     else:
-        return jsonify({"error": "Invalid username"}), 400
+        return jsonify({"error": "Invalid database type"}), 400
 
 
 @app.route("/addAdminUsers", methods=["POST"])
 @jwt_required()
 def add_admin_users():
     accessAdmin = request.json.get("accessAdmin")
+    username = request.json.get("username")
+
     if not accessAdmin:
         return jsonify({"error": "accessAdmin is required"}), 400
-    
-    #  get full with username
-
-    accessAdminFullDetails = users_collection.find_one({"name": accessAdmin})
-    if not accessAdminFullDetails:
-        return jsonify({"error": "User not found"}), 404
-
-    if accessAdminFullDetails["role"]!= "admin":
-        return jsonify({"message": "User not authorized as admin"}), 200
-
-    username = request.json.get("username")
     if not username:
         return jsonify({"error": "Username is required"}), 400
     if username == accessAdmin:
         return jsonify({"error": "You cannot add yourself as admin"}), 400
-    # check if user is already admin
-    # change role to user
+
     if db_name == "mongo":
+        # ✅ Use users_collection only if db is Mongo
+        accessAdminFullDetails = users_collection.find_one({"name": accessAdmin})
+        if not accessAdminFullDetails:
+            return jsonify({"error": "User not found"}), 404
+
+        if accessAdminFullDetails["role"] != "admin":
+            return jsonify({"message": "User not authorized as admin"}), 200
+
         users_collection.update_one({"name": username}, {"$set": {"role": "admin"}})
         return jsonify({"message": "User added as admin"}), 200
+
     elif db_name == "postgres":
         conn = psycopg2.connect(dsn)
         cur = conn.cursor()
+        # ✅ First, check the accessAdmin’s role
+        cur.execute("SELECT role FROM users WHERE name = %s", (accessAdmin,))
+        result = cur.fetchone()
+        if not result:
+            return jsonify({"error": "User not found"}), 404
+        if result[0] != "admin":
+            return jsonify({"message": "User not authorized as admin"}), 200
+
         cur.execute("UPDATE users SET role = 'admin' WHERE name = %s", (username,))
         conn.commit()
         cur.close()
         conn.close()
         return jsonify({"message": "User added as admin"}), 200
+
     else:
-        return jsonify({"error": "Invalid username"}), 400
+        return jsonify({"error": "Invalid database type"}), 400
 
 
 # port 5000

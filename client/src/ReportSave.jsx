@@ -35,8 +35,14 @@ const ReportSave = ({SetShowReportSave, output , backgroundSelect}) => {
       });
 
       const data = await response.json();
+      
+      setSavedReportId(data.report_id);
+        console.log("report id",data.report_id);
+        let reportid
       if (response.ok) {
-        setSavedReportId(data.report_id);
+         reportid = data.report_id
+         console.log("id ",reportid);
+         
         setError(null);
         //SetShowReportSave(false);
       } else {
@@ -49,7 +55,7 @@ const ReportSave = ({SetShowReportSave, output , backgroundSelect}) => {
           Authorization: `Bearer ${token}`, 
         },
         body: JSON.stringify({
-          report_id: savedReportId,
+          report_id: reportid ,
           name
         }),
       });
